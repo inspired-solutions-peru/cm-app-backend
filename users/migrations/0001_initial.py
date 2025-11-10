@@ -36,7 +36,7 @@ class Migration(migrations.Migration):
                 ('is_active_for_service', models.BooleanField(default=False, verbose_name='¿Activo para servicio?')),
                 ('created_at', models.DateTimeField(auto_now_add=True)),
                 ('updated_at', models.DateTimeField(auto_now=True)),
-                ('roles', models.ManyToManyField(related_name='users', to='usuarios.role')),
+                ('roles', models.ManyToManyField(related_name='users', to='users.role')),
                 ('user', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, related_name='profile', to=settings.AUTH_USER_MODEL)),
             ],
             options={
@@ -50,7 +50,7 @@ class Migration(migrations.Migration):
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('store_name', models.CharField(max_length=150, verbose_name='Nombre de Tienda/Negocio')),
                 ('store_address', models.CharField(max_length=255, verbose_name='Dirección')),
-                ('user_profile', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, related_name='provider_data', to='usuarios.userprofile')),
+                ('user_profile', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, related_name='provider_data', to='users.userprofile')),
             ],
             options={
                 'verbose_name': 'Datos de Proveedor',
@@ -69,7 +69,7 @@ class Migration(migrations.Migration):
                 ('vehicle_model', models.CharField(blank=True, max_length=50, null=True, verbose_name='Modelo del Vehículo')),
                 ('vehicle_color', models.CharField(blank=True, max_length=30, null=True, verbose_name='Color del Vehículo')),
                 ('is_verified', models.BooleanField(default=False, verbose_name='¿Datos Verificados?')),
-                ('user_profile', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, related_name='driver_data', to='usuarios.userprofile')),
+                ('user_profile', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, related_name='driver_data', to='users.userprofile')),
             ],
             options={
                 'verbose_name': 'Datos de Conductor',

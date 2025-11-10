@@ -32,7 +32,7 @@ class UserProfile(models.Model):
     phone = models.CharField(max_length=20, unique=True, verbose_name="Teléfono")
     
     # La relación Muchos-a-Muchos que pediste.
-    # Django creará la tabla intermedia (usuarios_userprofile_roles) por ti.
+    # Django creará la tabla intermedia (users_userprofile_roles) por ti.
     roles = models.ManyToManyField(Role, related_name="users")
 
     # Campos de Ubicación (para la búsqueda inicial)
@@ -43,6 +43,16 @@ class UserProfile(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+
+    average_rating = models.DecimalField(
+        max_digits=3, 
+        decimal_places=2, 
+        default=5.00, 
+        verbose_name="Calificación Promedio"
+    )
+    total_ratings = models.PositiveIntegerField(default=0, verbose_name="Total de Calificaciones")
+
 
     def __str__(self):
         return f"Perfil de {self.user.username} ({self.full_name})"
@@ -96,3 +106,86 @@ class ProviderData(models.Model):
     class Meta:
         verbose_name = "Datos de Proveedor"
         verbose_name_plural = "Datos de Proveedores"
+
+
+class UserSavedLocation(models.Model):
+    # Un perfil de usuario puede tener MUCHAS ubicaciones guardadas
+    user_profile = models.ForeignKey(UserProfile, on_delete=models.CASCADE, related_name="saved_locations")
+
+    name = models.CharField(max_length=100, verbose_name="Nombre del Lugar (ej. Casa)")
+    address = models.CharField(max_length=255, verbose_name="Dirección")
+
+    # Guardamos las coordenadas para no tener que buscarlas de nuevo
+    latitude = models.DecimalField(max_digits=22, decimal_places=16)
+    longitude = models.DecimalField(max_digits=22, decimal_places=16)
+
+    # (Opcional) Podemos añadir un ícono, como en el frontend
+    icon_name = models.CharField(max_length=50, blank=True, null=True, verbose_name="Nombre del Ícono (ej. 'home', 'work')")
+
+    def __str__(self):
+        return f"{self.user_profile.full_name} - {self.name} ({self.address})"
+
+    class Meta:
+        verbose_name = "Ubicación Guardada"
+        verbose_name_plural = "Ubicaciones Guardadas"
+
+# MODELO 6: TIPO DE MÉTODO DE PAGO
+# (Catálogo: Tarjeta, Yape, Plin, Efectivo)
+# ---------------------------------------------------------------------------
+class PaymentMethodType(models.Model):
+    class Types(models.TextChoices):
+        TARJETA = 'TARJETA', 'Tarjeta'
+        YAPE = 'YAPE', 'Yape'
+        PLIN = 'PLIN', 'Plin'
+        EFECTIVO = 'EFECTIVO', 'Efectivo'
+
+    name = models.CharField(
+        max_length=20,
+        choices=Types.choices,
+        unique=True,
+        verbose_name="Nombre del Método"
+    )
+    icon_name = models.CharField(max_length=50, blank=True, null=True, verbose_name="Nombre del Ícono")
+
+    def __str__(self):
+        return self.get_name_display() # Muestra el valor legible (ej. "Tarjeta")
+
+    class Meta:
+        verbose_name = "Tipo de Método de Pago"
+        verbose_name_plural = "Tipos de Métodos de Pago"
+
+# ---------------------------------------------------------------------------
+# ¡¡¡CÓDIGO NUEVO!!! (Paso 2)
+# MODELO 7: MÉTODO DE PAGO DEL USUARIO
+# (La tarjeta Visa 1234 o el Yape de un usuario específico)
+# ---------------------------------------------------------------------------
+class UserPaymentMethod(models.Model):
+    user_profile = models.ForeignKey(UserProfile, on_delete=models.CASCADE, related_name="payment_methods")
+    payment_type = models.ForeignKey(PaymentMethodType, on_delete=models.PROTECT, related_name="user_methods")
+
+    # Un nombre amigable que el usuario puede poner
+    nickname = models.CharField(max_length=50, blank=True, null=True, verbose_name="Apodo (ej. Visa Personal)")
+
+    # Campos específicos para TARJETAS (pueden ser nulos para Yape/Plin/Efectivo)
+    card_brand = models.CharField(max_length=50, blank=True, null=True, verbose_name="Marca (Visa, Mastercard)")
+    last_four_digits = models.CharField(max_length=4, blank=True, null=True, verbose_name="Últimos 4 dígitos")
+    # NO GUARDAMOS EL NÚMERO COMPLETO NI EL CVV, ¡NUNCA!
+    # En una app real, aquí guardarías un 'payment_token' de un procesador de pagos (Stripe, Culqi, etc.)
+    payment_token = models.CharField(max_length=255, blank=True, null=True, verbose_name="Token de Pago")
+    
+    # Campo para Yape/Plin (ej. número de teléfono)
+    identifier = models.CharField(max_length=100, blank=True, null=True, verbose_name="Identificador (ej. N° de Yape)")
+    
+    is_default = models.BooleanField(default=False, verbose_name="¿Es método por defecto?")
+
+    def __str__(self):
+        if self.payment_type.name == PaymentMethodType.Types.TARJETA:
+            return f"{self.user_profile.full_name} - {self.card_brand} **** {self.last_four_digits}"
+        else:
+            return f"{self.user_profile.full_name} - {self.payment_type.get_name_display()}"
+
+    class Meta:
+        verbose_name = "Método de Pago de Usuario"
+        verbose_name_plural = "Métodos de Pago de Usuarios"
+        # Opcional: Un usuario no puede tener la misma tarjeta dos veces
+        unique_together = ('user_profile', 'payment_token', 'last_four_digits') 
