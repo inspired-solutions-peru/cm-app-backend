@@ -1,5 +1,3 @@
-import os
-
 """
 Django settings for backend_project project.
 
@@ -13,6 +11,8 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 from pathlib import Path
+import os
+from datetime import timedelta # <-- ¡IMPORTANTE! Lo usaremos para JWT
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -22,10 +22,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-wxbkf8#w639zp1a)%4e+(iqne@&#og!-ccnk@f#m6o0!q*%)9e'
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get('DJANGO_DEBUG', 'False') == 'True'
 
 ALLOWED_HOSTS = []
 
@@ -37,17 +37,20 @@ INSTALLED_APPS = [
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
-    'django.contrib.messages',  
-    'django.contrib.staticfiles', 
+    'django.contrib.messages',
+    'django.contrib.staticfiles',
 
     # Apps de Terceros
     'rest_framework',
+    'rest_framework_simplejwt', # <-- ¡NUEVA LIBRERÍA DE LOGIN!
 
     # Mis Apps
     'users',
     'travel',
     'reviews',
     'wallets',
+    'promotions',
+    'support',
 ]
 
 MIDDLEWARE = [
@@ -69,6 +72,7 @@ TEMPLATES = [
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
+                'django.template.context_processors.debug',
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
@@ -76,7 +80,6 @@ TEMPLATES = [
         },
     },
 ]
-
 
 WSGI_APPLICATION = 'backend_project.wsgi.application'
 
@@ -88,9 +91,9 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': os.environ.get('MYSQL_DATABASE'),
-        'USER': 'root',
-        'PASSWORD': os.environ.get('MYSQL_ROOT_PASSWORD'),
-        'HOST': os.environ.get('MYSQL_HOST'),
+        'USER': 'root', # Usamos root directamente
+        'PASSWORD': os.environ.get('MYSQL_ROOT_PASSWORD'), # Lee '12345' del .env
+        'HOST': os.environ.get('MYSQL_HOST'), # Esto será 'db'
         'PORT': '3306',
     }
 }
@@ -118,12 +121,9 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
-
-TIME_ZONE = 'UTC'
-
+LANGUAGE_CODE = 'es-pe' # Español (Perú)
+TIME_ZONE = 'America/Lima' # Zona horaria
 USE_I18N = True
-
 USE_TZ = True
 
 
@@ -136,3 +136,47 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
+# -----------------------------------------------------------------
+# ¡¡¡CONFIGURACIÓN NUEVA DE API (DRF) Y LOGIN (JWT)!!!
+# -----------------------------------------------------------------
+
+REST_FRAMEWORK = {
+    # Usamos la autenticación de JWT por defecto
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ),
+    # Por defecto, todas las vistas requerirán un token (ser logueado)
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.IsAuthenticated',
+    ),
+}
+
+# Configuración del "Pase VIP" (JWT)
+SIMPLE_JWT = {
+    # Duración del token de acceso (el pase normal)
+    'ACCESS_TOKEN_LIFETIME': timedelta(days=1), # El usuario estará logueado 1 día
+    
+    # Duración del token de refresco (para "renovar" el pase sin pedir clave)
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+    
+    'ROTATE_REFRESH_TOKENS': False,
+    'BLACKLIST_AFTER_ROTATION': False,
+    'UPDATE_LAST_LOGIN': True, # Actualiza el "último login" del usuario
+
+    'ALGORITHM': 'HS256',
+    'SIGNING_KEY': SECRET_KEY, # ¡Usa nuestra clave secreta!
+    
+    'AUTH_HEADER_TYPES': ('Bearer',), # El frontend debe enviar: "Bearer <token>"
+    'AUTH_HEADER_NAME': 'HTTP_AUTHORIZATION',
+    'USER_ID_FIELD': 'id',
+    'USER_ID_CLAIM': 'user_id',
+    'USER_AUTHENTICATION_RULE': 'rest_framework_simplejwt.authentication.default_user_authentication_rule',
+
+    'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.AccessToken',),
+    'TOKEN_TYPE_CLAIM': 'token_type',
+    'TOKEN_USER_CLASS': 'django.contrib.auth.models.User',
+
+    'JTI_CLAIM': 'jti',
+}
