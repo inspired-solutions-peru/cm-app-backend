@@ -3,3 +3,4 @@ djangorestframework
 mysqlclient
 python-dotenv
 djangorestframework-simplejwt
+gunicorn
