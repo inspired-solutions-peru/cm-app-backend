@@ -4,3 +4,4 @@ mysqlclient
 python-dotenv
 djangorestframework-simplejwt
 gunicorn
+whitenoise
