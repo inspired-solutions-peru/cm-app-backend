@@ -1,12 +1,15 @@
+# users/apps.py (ASEGÚRATE QUE ESTÉ ASÍ)
+
 from django.apps import AppConfig
 
-
-class usersConfig(AppConfig):
+class UsersConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
     name = 'users'
 
-    # ¡Añadimos esta función!
-    # Esto le dice a Django que cargue nuestros "signals"
-    # cuando arranque la aplicación.
     def ready(self):
-        import users.signals # Importa las señales
+        # Importa los signals aquí para que se registren
+        # cuando Django arranque.
+        try:
+            import users.signals
+        except ImportError:
+            pass
